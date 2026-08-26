@@ -25,6 +25,12 @@ param postgresDatabase string
 param postgresUser string
 param keyVaultName string
 
+@description('Key Vault URI, e.g. https://kv.vault.azure.net/')
+param keyVaultUri string
+
+@description('Name of the Key Vault secret holding the PostgreSQL admin password.')
+param postgresPasswordSecretName string
+
 param azureOpenAiEndpoint string
 param azureOpenAiDeployment string
 
@@ -62,6 +68,24 @@ var registryConfig = [
   }
 ]
 
+// The PostgreSQL password reaches the container as a Key Vault REFERENCE, not
+// a value. Container Apps resolves it at runtime using the managed identity, so
+// the secret never appears in the template, in deployment history, or in
+// `az containerapp show` output.
+//
+// This is the piece that was missing on the first deploy: the template passed
+// AZURE_KEY_VAULT_NAME and assumed the application would fetch the secret
+// itself, but no such code exists — so the app fell back to its local default
+// password and could not connect. Wiring it here means zero app code and zero
+// secrets in the template.
+var kvSecrets = [
+  {
+    name: 'postgres-password'
+    keyVaultUrl: '${keyVaultUri}secrets/${postgresPasswordSecretName}'
+    identity: identityResourceId
+  }
+]
+
 // ── API ────────────────────────────────────────────────────────────────────
 resource api 'Microsoft.App/containerApps@2024-03-01' = {
   name: 'ca-${prefix}-api-${environmentNameSuffix}'
@@ -84,7 +108,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
         }
       }
       registries: registryConfig
-      // Note: no `secrets` block. There is nothing to put in it.
+      secrets: kvSecrets
     }
     template: {
       containers: [
@@ -100,6 +124,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'POSTGRES_PORT', value: '5432' }
             { name: 'POSTGRES_USER', value: postgresUser }
             { name: 'POSTGRES_DB', value: postgresDatabase }
+            { name: 'POSTGRES_PASSWORD', secretRef: 'postgres-password' }
             { name: 'AZURE_KEY_VAULT_NAME', value: keyVaultName }
             { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
             { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
@@ -107,19 +132,26 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
             { name: 'LOG_LEVEL', value: 'info' }
             { name: 'PROPERTY_NAME', value: 'Neon Palms Casino Resort' }
+            // Makes `azd up` produce a working demo rather than a correctly
+            // deployed empty one. Only fires when the machines table is empty.
+            { name: 'SEED_ON_STARTUP', value: 'true' }
           ]
           probes: [
             {
               type: 'Readiness'
               httpGet: { path: '/api/health', port: 8000 }
-              initialDelaySeconds: 10
+              initialDelaySeconds: 15
               periodSeconds: 10
+              failureThreshold: 6
             }
           ]
         }
       ]
       scale: {
-        minReplicas: 0
+        // minReplicas 1, not 0. Scale-to-zero saves a few dollars but adds a
+        // 20-40s cold start to the first request, which is a poor experience
+        // for a demo someone is about to show on a screen.
+        minReplicas: 1
         maxReplicas: 3
       }
     }
@@ -159,7 +191,8 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = {
         }
       ]
       scale: {
-        minReplicas: 0
+        // Warm, for the same reason as the api — see the note there.
+        minReplicas: 1
         maxReplicas: 2
       }
     }

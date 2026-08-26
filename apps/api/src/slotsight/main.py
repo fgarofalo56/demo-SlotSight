@@ -65,6 +65,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as exc:
         log.error("Could not prepare database schema: %s", exc)
 
+    # Opt-in, and only when the floor is genuinely empty. This is what makes
+    # `azd up` produce a working demo instead of a correctly-deployed empty one.
+    # See Settings.seed_on_startup.
+    if settings.seed_on_startup:
+        try:
+            from sqlalchemy import func, select
+
+            from slotsight.db import session_scope
+            from slotsight.models import Machine
+            from slotsight.seed.generate import seed as run_seed
+
+            async with session_scope() as session:
+                count = (
+                    await session.execute(select(func.count()).select_from(Machine))
+                ).scalar_one()
+
+            if count:
+                log.info("Floor already seeded (%d machines) - skipping startup seed", count)
+            else:
+                log.info("Empty floor detected; generating synthetic data ...")
+                result = await run_seed(reset=False, quiet=True)
+                log.info("Startup seed complete: %s", result)
+        except Exception as exc:
+            # Never block startup on the seed. /api/health will report the
+            # database as degraded, which is the honest signal.
+            log.error("Startup seed failed: %s", exc)
+
     yield
 
     await close_client()

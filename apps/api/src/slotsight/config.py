@@ -60,6 +60,18 @@ class Settings(BaseSettings):
     seed_machine_count: int = 840
     seed_days_of_history: int = 180
 
+    # Generate the synthetic floor at startup IF the database is empty.
+    #
+    # Off by default: a service that writes 151,200 rows to a database it did
+    # not expect to be empty is a bad surprise, and locally `make up` runs the
+    # seed as its own compose service where you can see it.
+    #
+    # It is switched ON for the Azure Container App, so that `azd up` produces
+    # a working demo rather than a correctly-deployed empty one. It only ever
+    # fires when the machines table has no rows, so a restart never re-seeds
+    # and never overwrites anything.
+    seed_on_startup: bool = False
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def sqlalchemy_url(self) -> str:

@@ -152,6 +152,8 @@ module apps 'modules/containerapps.bicep' = {
     postgresDatabase: database.outputs.databaseName
     postgresUser: database.outputs.administratorLogin
     keyVaultName: vault.outputs.name
+    keyVaultUri: vault.outputs.uri
+    postgresPasswordSecretName: database.outputs.passwordSecretName
     azureOpenAiEndpoint: ai.outputs.endpoint
     azureOpenAiDeployment: ai.outputs.deploymentName
   }
