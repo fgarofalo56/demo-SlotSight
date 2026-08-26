@@ -67,10 +67,13 @@
     "**/pnpm-lock.yaml": true
   },
 
-  "// Safety": "Never let the editor surface a credential file",
+  "// Safety": "Hide real credential files from the explorer so they can't be opened by accident on a shared screen. NOTE: this is a convenience, NOT a security control — .gitignore, .githooks, the agent guardrail, and the CI scan are the actual controls (see SECURITY.md). Patterns are listed EXPLICITLY rather than as `**/.env.*`, because that glob also matches .env.example and hides the one file a new contributor needs.",
   "files.exclude": {
     "**/.env": true,
-    "**/.env.*": true,
+    "**/.env.local": true,
+    "**/.env.development": true,
+    "**/.env.production": true,
+    "**/.env.test": true,
     "**/secrets": true
   },
   "files.watcherExclude": {
