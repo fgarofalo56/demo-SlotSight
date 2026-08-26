@@ -1,0 +1,32 @@
+#!/bin/sh
+# Set DNS_RESOLVER from the container's own resolver configuration.
+#
+# The nginx entrypoint SOURCES every *.envsh in /docker-entrypoint.d/ (and
+# executes every *.sh), in filename order. This runs before
+# 20-envsubst-on-templates.sh, so the value we export here is visible to
+# envsubst and lands in the rendered nginx config.
+#
+# Why this exists: nginx needs a `resolver` directive to look up a proxy_pass
+# upstream held in a variable, and there is no single IP that works everywhere.
+#   * 127.0.0.11 is Docker's embedded DNS and does not exist in Azure
+#     Container Apps, where it REFUSES the connection.
+#   * 168.63.129.16 is Azure's platform resolver and is reachable from VMs, but
+#     TIMES OUT from inside a Container Apps network namespace.
+# Reading the nameserver the platform actually gave us sidesteps the guessing.
+#
+# Set DNS_RESOLVER explicitly in the environment to override this.
+
+if [ -z "${DNS_RESOLVER:-}" ] || [ "${DNS_RESOLVER}" = "auto" ]; then
+    _resolved=$(awk '/^nameserver/ { printf "%s ", $2 }' /etc/resolv.conf 2>/dev/null)
+    if [ -n "$_resolved" ]; then
+        DNS_RESOLVER="$_resolved"
+    else
+        # Last resort: a public resolver. Better than failing to start.
+        DNS_RESOLVER="1.1.1.1 8.8.8.8"
+    fi
+    export DNS_RESOLVER
+    echo "10-set-dns-resolver: DNS_RESOLVER=${DNS_RESOLVER}"
+    unset _resolved
+else
+    echo "10-set-dns-resolver: using provided DNS_RESOLVER=${DNS_RESOLVER}"
+fi

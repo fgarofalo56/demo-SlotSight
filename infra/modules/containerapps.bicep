@@ -187,6 +187,11 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = {
           }
           env: [
             { name: 'API_URL', value: 'https://${api.properties.configuration.ingress.fqdn}' }
+            // "auto" = discover the platform nameserver from /etc/resolv.conf at
+            // container start. Neither Docker's 127.0.0.11 nor Azure's
+            // 168.63.129.16 works in both environments — the first refuses here,
+            // the second times out. See apps/web/docker-entrypoint.d/.
+            { name: 'DNS_RESOLVER', value: 'auto' }
           ]
         }
       ]

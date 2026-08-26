@@ -1,0 +1,87 @@
+# nginx config template for the SlotSight SPA.
+#
+# This is a TEMPLATE, not a config. The nginx:alpine image runs
+# /docker-entrypoint.d/20-envsubst-on-templates.sh, which substitutes
+# environment variables into every file in /etc/nginx/templates/ and writes the
+# result to /etc/nginx/conf.d/.
+#
+# Two things here are load-bearing, and both exist because the first Azure
+# deploy failed on them:
+#
+# 1. ${API_URL} is substituted at container start. The previous version
+#    hardcoded `proxy_pass http://api:8000` — the Docker Compose service name —
+#    which does not exist in Azure Container Apps.
+#
+# 2. The upstream is assigned to a variable before proxy_pass. nginx resolves a
+#    LITERAL upstream at config-parse time and aborts the whole server with
+#    "host not found in upstream" if it cannot. Going through a variable defers
+#    resolution to request time, so the container starts even when the API is
+#    still coming up — which on a cold deploy it always is.
+#
+# Port 8080 rather than 80 so the container can run as a non-root user.
+
+server {
+    listen       8080;
+    server_name  _;
+    root         /usr/share/nginx/html;
+    index        index.html;
+
+    # Explicit, and substituted by envsubst like ${API_URL}.
+    #
+    # Do NOT hardcode 127.0.0.11 (Docker's embedded DNS): it does not exist in
+    # Azure Container Apps, and because it actively REFUSES the connection
+    # rather than timing out, nginx never falls through to a second resolver —
+    # every proxied request simply hangs until the client gives up.
+    #
+    # NGINX_LOCAL_RESOLVERS (set by the image's 15-local-resolvers.envsh) looks
+    # like the right answer but is not in envsubst's defined-variable list, so
+    # it renders literally and nginx aborts with "host not found in resolver".
+    #
+    #   Compose        -> 127.0.0.11      (Dockerfile default)
+    #   Container Apps -> 168.63.129.16   (set in infra/modules/containerapps.bicep)
+    resolver ${DNS_RESOLVER} valid=30s ipv6=off;
+
+    # Hashed assets are immutable; index.html must never be cached, or a deploy
+    # leaves users on a stale bundle pointing at assets that no longer exist.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-store, must-revalidate";
+    }
+
+    # Proxy the API so the browser sees one origin and never needs CORS.
+    location /api/ {
+        set $upstream "${API_URL}";
+        proxy_pass         $upstream$request_uri;
+
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $proxy_host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_ssl_server_name on;
+
+        # The chat endpoint calls Azure OpenAI and can legitimately take a
+        # while when the model chains several tool calls.
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+
+        proxy_intercept_errors off;
+    }
+
+    # SPA fallback: any unknown path renders the app, not a 404.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    gzip              on;
+    gzip_types        text/css application/javascript application/json image/svg+xml;
+    gzip_min_length   1024;
+}
