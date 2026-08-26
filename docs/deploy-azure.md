@@ -1,7 +1,7 @@
 # ☁️ Deploy to Azure
 
 ```bash
-azd auth login
+azd config set auth.useAzCliAuth true   # or: azd auth login
 azd up
 ```
 
@@ -19,8 +19,8 @@ flowchart LR
         MI["Managed Identity"]
         ACR["Container Registry<br/><small>Basic</small>"]
         CAE["Container Apps Env"]
-        API["ca-api<br/><small>0.5 vCPU · min 0</small>"]
-        WEB["ca-web<br/><small>0.25 vCPU · min 0</small>"]
+        API["ca-api<br/><small>0.5 vCPU · min 1</small>"]
+        WEB["ca-web<br/><small>0.25 vCPU · min 1</small>"]
         PG[("PostgreSQL 16<br/><small>B1ms · 32 GB</small>")]
         KV["Key Vault"]
         AIF["AI Foundry<br/><small>disableLocalAuth</small>"]
@@ -51,7 +51,7 @@ figures, or ask the Azure MCP server.
 
 | Resource | ~Monthly |
 |---|---|
-| Container Apps (consumption, `minReplicas: 0`) | **$0–3** — scales to zero |
+| Container Apps (2 apps, `minReplicas: 1`) | **~$15–25** — kept warm, no cold start |
 | PostgreSQL Flexible Server B1ms + 32 GB | **~$15–20** ← the bulk of it |
 | Container Registry (Basic) | ~$5 |
 | Log Analytics (30-day, low volume) | ~$0–3 |
@@ -109,7 +109,8 @@ az account show --query "{sub:name, id:id}" -o json
 Deploying a demo into the wrong subscription happens and is annoying to unwind.
 
 ```bash
-az bicep build --file infra/main.bicep    # compiles?
+az bicep build --file infra/main.bicep                 # template compiles?
+az bicep build-params --file infra/main.bicepparam --stdout  # params too (build does NOT check these)
 azd provision --preview                    # what-if, changes nothing
 ```
 
@@ -125,29 +126,44 @@ azd env get-values | grep -i URI
 
 curl -fsS <SERVICE_API_URI>/api/health
 curl -fsS <SERVICE_API_URI>/api/floor/summary
+curl -fsS <SERVICE_WEB_URI>/api/health     # proves the nginx proxy works too
 ```
 
-If `/api/health` reports the database as `degraded`, **the seed job has not
-run** — the schema exists but there is no data. Do not call the deploy
-successful until this is fixed.
+`/api/health` should report `"status": "ok"` with the database `ok`. If the
+database reads `degraded — "no machines found"`, the startup seed did not run.
 
-### Seeding the deployed database
+### The database seeds itself on first boot
+
+The Container App sets `SEED_ON_STARTUP=true`, so the API generates the
+synthetic floor **if and only if the machines table is empty**. A restart never
+re-seeds and never overwrites. First boot therefore takes about a minute longer
+while it writes 151,200 rows.
+
+It is **off by default** everywhere else — a service that writes six figures of
+rows into a database it did not expect to be empty is a bad surprise, and
+locally `make up` runs the seed as its own visible compose service.
+
+If you would rather seed manually, unset that variable and run:
 
 ```bash
-az containerapp job create \
-  --name slotsight-seed \
-  --resource-group <rg> \
-  --environment <container-apps-env> \
-  --trigger-type Manual \
-  --image <acr>.azurecr.io/slotsight/api:latest \
-  --command "slotsight-seed" "--reset" \
-  --mi-user-assigned <identity-resource-id>
-
-az containerapp job start --name slotsight-seed --resource-group <rg>
+az containerapp exec -n <api-app> -g <rg> --command "slotsight-seed --reset"
 ```
 
-Or run it once against the Flexible Server from your machine, with the firewall
-temporarily allowing your IP.
+### The chat endpoint on Azure
+
+This is the one thing that works **better** in Azure than locally. The
+Container App's user-assigned managed identity resolves cleanly through
+`DefaultAzureCredential`, so `POST /api/chat` works with no configuration —
+whereas locally on Windows or macOS the Entra token cache cannot cross into a
+Linux container at all.
+
+```bash
+curl -sS -X POST <SERVICE_WEB_URI>/api/chat \
+  -H 'content-type: application/json' \
+  -d '{"message":"Which penny video slots are underperforming this month?"}'
+```
+
+Expect a grounded answer in a few seconds, with the tool calls that produced it.
 
 ---
 
@@ -183,7 +199,7 @@ as requiring an explicit, unambiguous instruction.
 
 ```bash
 azd env set AZURE_LOCATION eastus2
-azd env set CHAT_MODEL_NAME gpt-4.1
+azd env set CHAT_MODEL_NAME gpt-4o
 azd env set CHAT_MODEL_CAPACITY 30
 ```
 
@@ -196,11 +212,30 @@ either pick another region or lower the capacity — the error names which.
 
 | Symptom | Cause |
 |---|---|
+| `azd` says "You must be logged into Azure" | `azd` has its own auth, separate from `az`. Either `azd auth login`, or `azd config set auth.useAzCliAuth true` to delegate to your existing `az` session. |
+| Bicep params error `BCP001: token not recognized "#"` | Parameter files use `//` for comments, not `#`. **`az bicep build --file main.bicep` does not catch this** — it only compiles the template. Use `az bicep build-params --file infra/main.bicepparam --stdout`. |
+| `VaultNameNotValid` | Key Vault names are capped at 24 characters. Fails at deploy time, not compile time. |
+| Model deployment fails on capacity | The region has no GlobalStandard quota for that model. Check with the command below and pick another model or region. |
 | `AuthorizationFailed` right after provisioning | RBAC propagation. Wait 2–5 minutes and retry. **Never** switch to a key. |
-| Model deployment fails on capacity | Region has none left. Try another, or lower `CHAT_MODEL_CAPACITY`. |
 | `VaultAlreadyExists` on re-deploy | Soft-deleted from a previous run. You needed `azd down --purge`. |
-| Container App won't start | `az containerapp logs show -n <app> -g <rg> --follow` |
-| `/api/health` degraded | Seed job has not run |
-| `azd deploy` can't find the service | The `azd-service-name` tag must match the key in `azure.yaml` |
+| API replica fails readiness, "connection refused" | The app could not reach PostgreSQL. Check that `POSTGRES_PASSWORD` is present as a `secretRef` on the container app. |
+| Web container won't start, "host not found in upstream" | nginx resolves a literal `proxy_pass` upstream at config-parse time. The upstream must go through a variable, with a `resolver` — see `apps/web/nginx.default.conf.template`. |
+| Web starts but `/api/*` hangs or 502s | The `resolver` address is wrong for the environment. `DNS_RESOLVER=auto` discovers it from `/etc/resolv.conf`; neither `127.0.0.11` nor `168.63.129.16` works in both Docker and Container Apps. |
+| `/api/health` degraded, "no machines found" | The startup seed did not run. Check `SEED_ON_STARTUP=true` on the container app. |
+| `azd deploy` can't find the service | The `azd-service-name` tag must match the key in `azure.yaml`. |
+
+Checking model quota before you deploy:
+
+```bash
+az cognitiveservices usage list -l eastus2 \
+  --query "[?contains(name.value,'GlobalStandard.gpt')].{model:name.value, used:currentValue, limit:limit}" \
+  -o table
+```
+
+> [!TIP]
+> `gpt-4.1` is offered **Batch-only** in several subscriptions — it has no
+> GlobalStandard quota, so a deployment silently fails to find capacity. That is
+> why the template defaults to `gpt-4o` / `2024-11-20`, which is far more widely
+> available.
 
 More: [troubleshooting](troubleshooting.md)

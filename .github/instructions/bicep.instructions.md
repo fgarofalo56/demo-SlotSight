@@ -47,7 +47,9 @@ access.
 This is a demo people will deploy and forget. Default to the cheapest thing that
 works, and say so in a comment:
 
-- Container Apps: consumption plan, `minReplicas: 0`
+- Container Apps: consumption plan. `minReplicas: 1` here, deliberately —
+  scale-to-zero saves a few dollars and adds a 20-40s cold start, which is the
+  wrong trade for a demo someone is about to put on a screen
 - PostgreSQL: `Standard_B1ms`, 32 GB, no HA
 - Log Analytics: 30-day retention
 - AI Foundry: `GlobalStandard` with a modest capacity

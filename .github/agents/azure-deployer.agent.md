@@ -69,7 +69,7 @@ its seed job run.
 ## Cost
 
 This is a demo people deploy and forget. Keep defaults cheap: Container Apps
-consumption with `minReplicas: 0`, PostgreSQL `Standard_B1ms`, 30-day log
+consumption, PostgreSQL `Standard_B1ms`, 30-day log
 retention, modest model capacity.
 
 When asked what it costs, use the `azure` pricing tools for real numbers rather
