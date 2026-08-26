@@ -33,9 +33,18 @@ curl -sS -X POST localhost:8000/api/chat -H 'content-type: application/json' \
 > fine in Docker; **chat needs `make dev`.** See
 > [troubleshooting](troubleshooting.md#chat-returns-502-inside-docker).
 
-**In VS Code:** reload the window, confirm all five MCP servers connect, and check
-that the agents dropdown lists all six. Have `specs/003-competitive-intel-feed/`
-open in a tab, ready.
+**In VS Code:** open the folder **at the repository root** (not a parent), then
+reload the window. Confirm all five MCP servers connect, and that the agents
+dropdown lists all six. Have `specs/003-competitive-intel-feed/` open in a tab,
+ready.
+
+> [!WARNING]
+> **Do the whole Copilot portion in the VS Code Chat view.** The `/spec-*`
+> commands are prompt files, and prompt files do **not** work in the Copilot
+> CLI, in inline chat, or in the coding agent on github.com — VS Code's docs
+> state that Agent Hosts don't use them. Verify `/spec` autocompletes in the
+> Chat sidebar *before* you walk in. If it doesn't, see
+> [troubleshooting](troubleshooting.md#the-spec--commands-dont-appear-in-chat).
 
 **Browser tabs:** the app at `localhost:5173`, and the repo on GitHub.
 
@@ -227,6 +236,7 @@ Then:
 
 | Symptom | Do this, out loud |
 |---|---|
+| `/spec-*` don't autocomplete | You're in inline chat or the CLI. Switch to the **Chat sidebar**. If still missing: reload the window, and check you opened the repo root. |
 | Chat 502s | "Auth expired." Run `az login` in a terminal. Or skip to Act 4 — everything else is deterministic SQL and doesn't care. |
 | Chat 503s | You're on `make up` instead of `make dev`. Say so — it's a genuine limitation worth explaining. |
 | MCP server red | Reload the VS Code window. `slotsight` needs the database up. |

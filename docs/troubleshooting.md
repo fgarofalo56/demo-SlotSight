@@ -216,7 +216,110 @@ why in the commit.
 
 ---
 
-## MCP servers show as unavailable in VS Code
+## The `/spec-*` commands don't appear in chat
+
+The single most common setup question. Work down this list.
+
+### 1. Are you in VS Code Chat? Prompt files do not work anywhere else
+
+**This is the most likely answer, and it is a hard limitation, not a
+misconfiguration.**
+
+| Surface | `/spec-*` prompt files | `.github/agents/` custom agents |
+|---|---|---|
+| **VS Code Chat view** | ✅ yes | ✅ yes |
+| **VS Code inline chat** (`Ctrl+I`) | ❌ no | ❌ no |
+| **GitHub Copilot CLI** | ❌ **no** | ⚠️ partial |
+| **Copilot coding agent** (github.com) | ❌ no | ❌ no |
+
+VS Code's own documentation is explicit: *"Agents running on the Agent Host
+don't use prompt files."* The Copilot CLI is an Agent Host. No amount of
+configuration will surface `/spec-new` there.
+
+Use the **Chat view** — the sidebar panel, not inline chat, not the CLI.
+
+### 2. Is the folder opened at the repository root?
+
+VS Code discovers `.github/prompts` relative to the **workspace folder**. If you
+opened a parent directory, they will not be found.
+
+```bash
+code E:/Repos/GitHub/MyDemoRepos/demo-SlotSight     # ✅
+code E:/Repos/GitHub/MyDemoRepos                    # ❌ one level too high
+```
+
+Check: the Explorer's top-level entry should read `DEMO-SLOTSIGHT`, and
+`.github/prompts/` should be directly beneath it.
+
+### 3. Reload the window
+
+Customization files are read at startup. If they arrived via `git pull` or were
+created while VS Code was open, they are not loaded yet.
+
+`Ctrl+Shift+P` → **Developer: Reload Window**
+
+### 4. Type `/` into an empty chat input
+
+The slash-command list only appears when `/` is the **first character**. Typing
+it mid-sentence does nothing.
+
+### 5. Confirm VS Code actually found them
+
+`Ctrl+Shift+P` → **Chat: Configure Agent Customizations** (or open the Agent
+Customizations editor). You should see 8 prompts, 6 agents, 7 instruction
+files, and 2 skills.
+
+If that editor lists nothing, discovery is failing — recheck steps 2 and 3.
+
+Alternatively, `Ctrl+Shift+P` → **Chat: Run Prompt** lists every prompt file it
+has discovered, independent of the slash-command UI.
+
+### 6. Check the workspace is trusted
+
+Restricted Mode disables workspace-provided customizations. The status bar shows
+it. `Ctrl+Shift+P` → **Workspaces: Manage Workspace Trust**.
+
+---
+
+## Is GitHub Spec Kit required?
+
+**No.** They are different, unrelated command sets.
+
+| | `/spec-*` | `/speckit.*` |
+|---|---|---|
+| Comes from | `.github/prompts/` **in this repo** | `specify-cli`, installed separately |
+| Install needed | **none** | `uv tool install specify-cli` |
+| Works in | VS Code Chat only | VS Code + Copilot CLI |
+
+This repository implements the spec-driven loop with **prompt files
+deliberately**, so it works from a clean clone with nothing installed.
+
+Installing [Spec Kit](https://github.com/github/spec-kit) gives you the
+`/speckit.*` family alongside — it will **not** make `/spec-plan` appear, and
+`/spec-plan` working does not mean Spec Kit is installed. See
+[spec-driven-development.md](spec-driven-development.md#using-github-spec-kit-instead).
+
+---
+
+## I want the spec workflow in the Copilot CLI
+
+Prompt files cannot work there. The documented path is to convert a prompt into
+an **agent skill**, which the Agent Host does read — see
+[`.github/skills/`](../.github/skills/) for the two this repo already ships.
+
+The practical alternative is to run the CLI and paste the body of the prompt
+file directly:
+
+```bash
+cat .github/prompts/spec-plan.prompt.md
+```
+
+Everything below the frontmatter is a plain instruction block and works as a
+pasted prompt in any agent.
+
+---
+
+
 
 1. **Reload the window.** `.vscode/mcp.json` is read at startup.
 2. **`slotsight` needs the database up** — `make up` or `make dev`.
@@ -224,6 +327,17 @@ why in the commit.
 4. **`context7` will prompt for an API key.** It is optional — press Escape and
    it runs rate-limited.
 5. Check the MCP output channel for the actual error.
+
+---
+
+## MCP servers show as unavailable in VS Code
+
+1. **Reload the window.** `.vscode/mcp.json` is read at startup.
+2. **`slotsight` needs the database up** — `make up` or `make dev`.
+3. **`azure` downloads on first run** via `npx`. Give it a minute.
+4. **`context7` will prompt for an API key.** It is optional — press Escape and
+   it runs rate-limited.
+5. Check the **MCP output channel** for the actual error.
 
 ---
 

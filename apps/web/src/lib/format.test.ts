@@ -70,6 +70,21 @@ describe('formatters', () => {
     expect(moneyCompact(340_000)).toBe('$340K')
   })
 
+  it('strips the ICU-dependent trailing .0', () => {
+    // Intl compact notation returns "$340K" on some ICU builds and "$340.0K"
+    // on others. This passed locally and failed in CI until moneyCompact
+    // normalized it. Assert the normalization directly so the difference can
+    // never come back silently.
+    for (const [input, expected] of [
+      [340_000, '$340K'],
+      [1_000_000, '$1M'],
+      [2_000, '$2K'],
+      [1_500_000, '$1.5M'],
+    ] as const) {
+      expect(moneyCompact(input)).toBe(expected)
+    }
+  })
+
   it('renders peer index to two decimals', () => {
     expect(index(1.0)).toBe('1.00')
     expect(index(0.6754)).toBe('0.68')

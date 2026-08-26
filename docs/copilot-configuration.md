@@ -36,6 +36,31 @@ AGENTS.md                        agent-host entry point
 *inform*. Only hooks *enforce*. If a rule must hold even when the model is
 having a bad day, it needs a hook.
 
+### ⚠️ Where each mechanism actually works
+
+Not every mechanism works in every Copilot surface, and the differences are not
+obvious. This is the table I wish I had read first.
+
+| Mechanism | VS Code Chat | Copilot CLI | Coding agent (github.com) |
+|---|---|---|---|
+| `copilot-instructions.md` | ✅ | ✅ | ✅ |
+| `AGENTS.md` | ✅ | ✅ | ✅ |
+| `*.instructions.md` | ✅ | ⚠️ varies | ✅ |
+| **`*.prompt.md`** | ✅ | ❌ **no** | ❌ no |
+| `*.agent.md` | ✅ | ⚠️ partial | ❌ no |
+| `SKILL.md` | ✅ | ✅ | ⚠️ varies |
+| Hooks | ✅ | ⚠️ varies | ❌ no |
+| MCP servers | ✅ | ✅ | ✅ (repo config) |
+
+**Prompt files are the sharp edge.** VS Code's documentation states plainly that
+*"Agents running on the Agent Host don't use prompt files"* — and the Copilot
+CLI is an Agent Host. The `/spec-*` commands in this repo therefore work in the
+**VS Code Chat view only**, not in the CLI, not in inline chat.
+
+If you need a workflow available everywhere, write it as an **agent skill**
+rather than a prompt file. That is the documented conversion path, and it is why
+skills sit higher in that table.
+
 ---
 
 ## 1. Repository instructions

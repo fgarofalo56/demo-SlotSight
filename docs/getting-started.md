@@ -106,8 +106,29 @@ The point of the repository. Open it in VS Code with the Copilot extension.
 code .
 ```
 
-Accept the recommended extensions, then **reload the window** so
-`.vscode/mcp.json` is read.
+> [!IMPORTANT]
+> **Open the folder at the repository root.** VS Code discovers
+> `.github/prompts`, `.github/agents`, and `.github/instructions` relative to
+> the workspace folder. Opening a parent directory means none of them load.
+>
+> **Then reload the window** — customization files are read at startup, so
+> anything that arrived with the clone is not loaded until you do.
+> `Ctrl+Shift+P` → *Developer: Reload Window*.
+
+> [!WARNING]
+> **The `/spec-*` commands work in the VS Code Chat view only.**
+>
+> They are [prompt files](https://code.visualstudio.com/docs/copilot/customization/prompt-files),
+> and VS Code's documentation is explicit that *"Agents running on the Agent
+> Host don't use prompt files."* That means they will **not** appear in the
+> **GitHub Copilot CLI**, in inline chat (`Ctrl+I`), or in the Copilot coding
+> agent on github.com.
+>
+> This is a platform limitation, not a configuration problem. See
+> [troubleshooting](troubleshooting.md#the-spec--commands-dont-appear-in-chat)
+> for the workaround if you want the workflow in the CLI.
+
+Accept the recommended extensions, then **reload the window**.
 
 **Confirm it worked:**
 
@@ -115,9 +136,15 @@ Accept the recommended extensions, then **reload the window** so
    `context7`, `azure`, `slotsight`.
    *(Context7 will prompt for an optional API key. Press Escape to skip.)*
 2. **Agents dropdown** — six custom agents.
-3. **Type `/`** in Copilot Chat — the `spec-*` commands autocomplete.
+3. **Chat view** (the sidebar panel, **not** inline chat) — type `/` as the
+   **first character** of an empty input. The `spec-*` commands autocomplete.
 4. **Try the guardrail** — ask Copilot to *read the .env file*. It gets denied.
    That is layer 3 of the security model working.
+
+> [!TIP]
+> If the commands don't appear, `Ctrl+Shift+P` → **Chat: Run Prompt** lists
+> every prompt file VS Code has actually discovered. Empty list means discovery
+> failed — check you opened the repo root and reloaded.
 
 Then ask the **Slot Analyst** agent:
 
@@ -126,6 +153,14 @@ Then ask the **Slot Analyst** agent:
 It queries the live database through our own MCP server.
 
 Full tour: [Copilot configuration](copilot-configuration.md)
+
+### These are not GitHub Spec Kit
+
+`/spec-*` are **this repository's own prompt files** — no installation needed.
+[GitHub Spec Kit](https://github.com/github/spec-kit) is a separate tool that
+provides a different `/speckit.*` command set and requires
+`uv tool install specify-cli`. Installing it will not make `/spec-plan` appear.
+See [spec-driven-development.md](spec-driven-development.md#using-github-spec-kit-instead).
 
 ---
 

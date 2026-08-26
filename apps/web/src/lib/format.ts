@@ -87,14 +87,23 @@ export function money(value: number, withCents = false): string {
   }).format(value)
 }
 
-/** Compact money for tiles: $1.2M, $340K. */
+/**
+ * Compact money for tiles: $1.2M, $340K.
+ *
+ * The trailing `.0` is stripped explicitly. `Intl.NumberFormat` compact
+ * notation is ICU-version dependent — the same call returns "$340K" on one
+ * platform and "$340.0K" on another, which broke CI while passing locally.
+ * Normalizing here keeps both the UI and the tests deterministic.
+ */
 export function moneyCompact(value: number): string {
-  return new Intl.NumberFormat('en-US', {
+  const formatted = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     notation: 'compact',
     maximumFractionDigits: 1,
   }).format(value)
+
+  return formatted.replace(/\.0(?=[A-Za-z]|$)/, '')
 }
 
 export function index(value: number): string {

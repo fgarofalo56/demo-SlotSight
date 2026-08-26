@@ -147,6 +147,17 @@ Every extension point, with a real working example.
 | **Hooks** | [`.github/hooks/`](.github/hooks/) | 4 lifecycle hooks — **including one that blocks Copilot itself** |
 | **MCP servers** | [`.vscode/mcp.json`](.vscode/mcp.json) | 5 servers, zero committed secrets |
 
+> [!IMPORTANT]
+> **The `/spec-*` commands work in the VS Code Chat view only** — open the
+> folder at the repo root and reload the window. They are prompt files, and
+> VS Code's docs state that Agent Hosts don't use them, so they will **not**
+> appear in the Copilot CLI, inline chat, or the coding agent on github.com.
+>
+> They are also **not** [GitHub Spec Kit](https://github.com/github/spec-kit)
+> and need nothing installed — Spec Kit is a separate tool with a different
+> `/speckit.*` command set. See
+> [troubleshooting](docs/troubleshooting.md#the-spec--commands-dont-appear-in-chat).
+
 Full walkthrough: **[docs/copilot-configuration.md](docs/copilot-configuration.md)**
 
 ### The agents hand off to each other
