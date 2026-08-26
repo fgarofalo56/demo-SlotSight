@@ -1,0 +1,23 @@
+#!/bin/sh
+# SlotSight pre-commit guard — see SECURITY.md
+#
+# Enable with:  git config core.hooksPath .githooks   (or: make setup)
+#
+# This is fast local feedback, NOT the backstop. `--no-verify` defeats it.
+# The real backstop is .github/workflows/secret-scan.yml, which scans full
+# history server-side.
+
+set -e
+
+# Resolve a python. Windows/Git Bash has `python`; some *nix only has `python3`.
+if command -v python >/dev/null 2>&1; then
+    PY=python
+elif command -v python3 >/dev/null 2>&1; then
+    PY=python3
+else
+    echo "⚠  pre-commit: no python found — SKIPPING secret scan."
+    echo "   CI will still catch it, but you are flying without local cover."
+    exit 0
+fi
+
+exec "$PY" .githooks/secret_scan.py --staged

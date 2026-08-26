@@ -1,0 +1,125 @@
+[project]
+name = "slotsight"
+version = "0.1.0"
+description = "SlotSight — intelligent slot floor performance assistant for Neon Palms Casino Resort (demo)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+dependencies = [
+    # ── Web ────────────────────────────────────────────────────────────────
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    # ── Data ───────────────────────────────────────────────────────────────
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "greenlet>=3.1.0",           # required by SQLAlchemy's asyncio bridge
+    "numpy>=2.1.0",              # synthetic data generation
+    # ── Azure OpenAI (Entra auth only — no API keys) ────────────────────────
+    "openai>=1.54.0",
+    "azure-identity>=1.19.0",
+    # azure-identity's ASYNC credentials need an async transport, and it is not
+    # a declared dependency of azure-identity itself. Without this,
+    # DefaultAzureCredential() raises ModuleNotFoundError at construction time
+    # and only on the chat path - which is the worst possible place to find out.
+    "aiohttp>=3.10.0",
+    # ── MCP server ─────────────────────────────────────────────────────────
+    # 2.x renamed FastMCP -> MCPServer. Pinned to the major so the rename
+    # cannot silently break `slotsight-mcp` for someone on an older SDK.
+    "mcp>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.27.0",
+    "aiosqlite>=0.20.0",         # in-memory DB for fast unit tests
+    "ruff>=0.7.0",
+    "mypy>=1.13.0",
+]
+
+[project.scripts]
+slotsight-seed = "slotsight.seed.generate:main"
+slotsight-mcp = "slotsight.mcp_server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/slotsight"]
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Ruff — lint + format. Single tool, no black/isort/flake8 zoo.
+# ═══════════════════════════════════════════════════════════════════════════
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "B",         # bugbear
+    "UP",        # pyupgrade
+    "SIM",       # simplify
+    "RUF",       # ruff-specific
+    "ASYNC",     # async correctness
+    "S",         # bandit — security
+]
+ignore = [
+    "E501",      # line length handled by the formatter
+    "B008",      # FastAPI's Depends() in defaults is the documented idiom
+    # Typographic characters (× ¢ →) are used deliberately in comments and
+    # docstrings here — this codebase is meant to be read, and "840 machines ×
+    # 180 days" is clearer than "840 machines x 180 days". They never appear in
+    # executable code, only in prose.
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests legitimately assert on hardcoded values and use `assert`.
+"tests/**" = [
+    "S101",  # assert is the point
+    "S105",  # "passwords" in fixtures are placeholders
+    "S106",
+    "S603",  # subprocess with sys.executable and a repo-local path is not untrusted input
+]
+# The generator uses numpy's PRNG for synthetic data — not cryptography.
+"src/slotsight/seed/**" = ["S311"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# mypy — strict enough to be useful, not so strict it blocks the demo.
+# ═══════════════════════════════════════════════════════════════════════════
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["mcp.*"]
+ignore_missing_imports = true
+
+# ═══════════════════════════════════════════════════════════════════════════
+# pytest
+# ═══════════════════════════════════════════════════════════════════════════
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-q --strict-markers"
+markers = [
+    "golden: asserts a planted narrative signal in the synthetic dataset",
+    "requires_azure: needs a live Azure OpenAI endpoint + az login",
+]

@@ -1,0 +1,82 @@
+name: 'Copilot Setup Steps'
+
+# Prepares the environment for the GitHub Copilot coding agent, so it starts
+# with dependencies installed rather than spending its first minutes on setup.
+#
+# The job MUST be named `copilot-setup-steps`, and this file must be on the
+# default branch for Copilot to use it.
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/copilot-setup-steps.yml']
+  pull_request:
+    paths: ['.github/workflows/copilot-setup-steps.yml']
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    services:
+      # The agent should be able to run the full test suite, including the
+      # Postgres-only path that SQLite cannot cover.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: slotsight
+          POSTGRES_PASSWORD: ci-only-not-a-real-secret
+          POSTGRES_DB: slotsight
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install API dependencies
+        working-directory: apps/api
+        run: uv venv && uv pip install -e ".[dev]"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Seed the synthetic floor
+        working-directory: apps/api
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: '5432'
+          POSTGRES_USER: slotsight
+          POSTGRES_PASSWORD: ci-only-not-a-real-secret
+          POSTGRES_DB: slotsight
+        run: uv run slotsight-seed --reset
+
+      - name: Confirm the gates pass before handing over
+        working-directory: apps/api
+        run: |
+          uv run ruff check .
+          uv run mypy src
+          uv run pytest -q

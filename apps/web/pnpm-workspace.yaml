@@ -1,0 +1,14 @@
+# pnpm settings for the SlotSight frontend.
+#
+# pnpm 11 refuses to run dependency install scripts unless they are explicitly
+# allowed here. Without this, `pnpm install` fails with ERR_PNPM_IGNORED_BUILDS.
+#
+# esbuild needs its postinstall to fetch the correct platform binary. Allowing
+# it means a fresh clone works with a plain `pnpm install`, rather than
+# requiring an interactive `pnpm approve-builds` — which would also break CI,
+# where nobody is there to answer the prompt.
+#
+# Note for anyone copying this: the key was `pnpm.onlyBuiltDependencies` in
+# package.json under pnpm 10, and moved here as `allowBuilds` in pnpm 11.
+allowBuilds:
+  esbuild: true

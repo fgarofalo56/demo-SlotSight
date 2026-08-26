@@ -1,0 +1,39 @@
+name: Question or idea
+description: Ask about the approach, or suggest an improvement to the example
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a teaching repository. The most useful contributions make it a
+        **clearer example**, not a bigger one.
+
+  - type: textarea
+    id: body
+    attributes:
+      label: Your question or idea
+    validations:
+      required: true
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      options:
+        - Spec-driven development workflow
+        - Copilot configuration (instructions, agents, prompts, skills)
+        - Hooks and the agent guardrail
+        - MCP servers
+        - The deterministic-analytics architecture
+        - Slot analytics domain
+        - Azure deployment
+        - Other
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        **Note:** some things will be declined by design — a player/PII table,
+        an Azure OpenAI API-key setting, real market data, or ranking on
+        `floor_index`. See CONTRIBUTING.md.

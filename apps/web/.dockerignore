@@ -1,0 +1,31 @@
+# Never copy the host's node_modules into the image — it overwrites the
+# container's own install, and pnpm's dependency-status check then fails the
+# build with a confusing error about re-running install.
+node_modules
+.pnpm-store
+
+# Build output — the image builds its own.
+dist
+dist-ssr
+*.local
+
+# Never let a credential reach a build context. See SECURITY.md.
+.env
+.env.*
+!.env.example
+secrets
+*.pem
+*.key
+*.pfx
+
+# Noise
+.git
+.gitignore
+.vscode
+.idea
+*.log
+coverage
+.eslintcache
+.DS_Store
+Thumbs.db
+.playwright-mcp

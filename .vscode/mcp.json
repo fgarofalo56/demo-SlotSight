@@ -1,0 +1,67 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vscode/main/src/vs/workbench/contrib/mcp/common/mcpSchema.json",
+
+  "//": [
+    "MCP servers for SlotSight. See docs/mcp-servers.md for what each one unlocks.",
+    "",
+    "NO SECRETS IN THIS FILE. The one server that needs a key reads it from an",
+    "'inputs' prompt, so VS Code stores it in your OS credential manager and it",
+    "never touches the repository. See SECURITY.md."
+  ],
+
+  "inputs": [
+    {
+      "id": "context7-api-key",
+      "type": "promptString",
+      "title": "Context7 API key",
+      "description": "Optional. Context7 works without a key at a lower rate limit. Get one free at https://context7.com/dashboard",
+      "password": true
+    }
+  ],
+
+  "servers": {
+    "github": {
+      "//": "Issues, PRs, Actions, code search across GitHub. VS Code handles OAuth - no token to store.",
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
+
+    "microsoft-docs": {
+      "//": "Official Microsoft/Azure documentation and code samples. No auth. Use this instead of recalling Azure API versions.",
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    },
+
+    "context7": {
+      "//": "Current, version-accurate library docs: FastAPI, SQLAlchemy 2.0, Pydantic v2, React 19, Tailwind v4. Beats recalling APIs that changed recently.",
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${input:context7-api-key}"
+      }
+    },
+
+    "azure": {
+      "//": "Live Azure resources: provision, deploy, inspect, price. Auth comes from your `az login` session - no credentials here.",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@azure/mcp@latest", "server", "start"]
+    },
+
+    "slotsight": {
+      "//": [
+        "OUR OWN SERVER. Exposes the live slot floor to Copilot Chat.",
+        "Ask 'which banks are fading?' in chat and it queries the real database",
+        "through the SAME analytics functions the REST API uses.",
+        "Requires: docker compose up (for the database). See mcp/README.md."
+      ],
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "--project", "apps/api", "slotsight-mcp"],
+      "env": {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432"
+      }
+    }
+  }
+}

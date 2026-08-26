@@ -1,0 +1,31 @@
+# Normalize line endings so Windows/macOS/Linux contributors don't fight.
+* text=auto eol=lf
+
+# Shell scripts and git hooks MUST be LF or they break on macOS/Linux.
+*.sh        text eol=lf
+.githooks/* text eol=lf
+
+# Windows-only scripts keep CRLF.
+*.ps1       text eol=crlf
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+
+# Binary assets — never diff or normalize.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.woff      binary
+*.woff2     binary
+
+# SVG is text and we want readable diffs on our brand assets.
+*.svg       text eol=lf
+
+# Lockfiles: mark as generated so GitHub collapses them in diffs.
+uv.lock        linguist-generated=true
+pnpm-lock.yaml linguist-generated=true
+
+# Don't let docs/specs skew the language stats — this is a Python+TS repo.
+docs/**    linguist-documentation=true
+specs/**   linguist-documentation=true

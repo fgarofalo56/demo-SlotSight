@@ -1,0 +1,41 @@
+#!/bin/sh
+# SlotSight pre-push guard — see SECURITY.md
+#
+# A push to a public remote is PUBLICATION. Force-pushing it away does not
+# un-publish it. This hook is the last local chance to stop that.
+#
+# Enable with:  git config core.hooksPath .githooks   (or: make setup)
+
+set -e
+
+if command -v python >/dev/null 2>&1; then
+    PY=python
+elif command -v python3 >/dev/null 2>&1; then
+    PY=python3
+else
+    echo "⚠  pre-push: no python found — SKIPPING secret scan."
+    exit 0
+fi
+
+ZERO="0000000000000000000000000000000000000000"
+
+# git feeds us "<local ref> <local sha> <remote ref> <remote sha>" on stdin.
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+    [ "$local_sha" = "$ZERO" ] && continue   # branch deletion
+
+    if [ "$remote_sha" = "$ZERO" ]; then
+        # New branch: scan every commit not already reachable from another ref.
+        range=$(git rev-list "$local_sha" --not --remotes | tail -1)
+        if [ -n "$range" ]; then
+            RANGE="${range}^..${local_sha}"
+        else
+            RANGE="${local_sha}~1..${local_sha}"
+        fi
+    else
+        RANGE="${remote_sha}..${local_sha}"
+    fi
+
+    "$PY" .githooks/secret_scan.py --range "$RANGE" || exit 1
+done
+
+exit 0

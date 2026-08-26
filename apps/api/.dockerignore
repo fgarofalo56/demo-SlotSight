@@ -1,0 +1,31 @@
+# Never copy the host virtualenv into the image — it is platform-specific and
+# would shadow the one the build creates.
+.venv
+venv
+__pycache__
+*.py[cod]
+*.egg-info
+
+# Caches
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+
+# Never let a credential reach a build context. See SECURITY.md.
+.env
+.env.*
+!.env.example
+secrets
+*.pem
+*.key
+*.pfx
+
+# Noise
+.git
+.gitignore
+.vscode
+*.log
+.DS_Store
+Thumbs.db

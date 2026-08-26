@@ -1,0 +1,97 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# SlotSight — local development stack
+#
+#   docker compose up --build       everything
+#   docker compose run --rm seed    regenerate the synthetic floor
+#
+# Azure OpenAI is OPTIONAL here. The dashboard, machines, and recommendations
+# all work with no cloud dependency; only /api/chat needs it. Set the two
+# AZURE_OPENAI_* vars in .env to enable it. There is no API key — auth is
+# Entra ID, so the container mounts your `az login` token cache read-only.
+# ═══════════════════════════════════════════════════════════════════════════
+
+name: slotsight
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-slotsight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only}
+      POSTGRES_DB: ${POSTGRES_DB:-slotsight}
+    ports:
+      # Exposed so the slotsight MCP server can reach it from the host.
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - slotsight-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-slotsight} -d ${POSTGRES_DB:-slotsight}']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  api:
+    build:
+      context: ./apps/api
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-slotsight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only}
+      POSTGRES_DB: ${POSTGRES_DB:-slotsight}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080
+      PROPERTY_NAME: ${PROPERTY_NAME:-Neon Palms Casino Resort}
+      # Optional — only /api/chat needs these.
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-2024-10-21}
+      AZURE_CONFIG_DIR: /home/slotsight/.azure
+    ports:
+      - '${API_PORT:-8000}:8000'
+    volumes:
+      # Read-only mount of your az CLI token cache so DefaultAzureCredential
+      # resolves inside the container. Read-only, and nothing is copied into
+      # the image.
+      - ${AZURE_CONFIG_DIR:-~/.azure}:/home/slotsight/.azure:ro
+    restart: unless-stopped
+
+  seed:
+    # Same image as the API — the generator ships with the application so it
+    # can never drift from the ORM models it writes through.
+    build:
+      context: ./apps/api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-slotsight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only}
+      POSTGRES_DB: ${POSTGRES_DB:-slotsight}
+      SEED_RANDOM_SEED: ${SEED_RANDOM_SEED:-20251107}
+      SEED_MACHINE_COUNT: ${SEED_MACHINE_COUNT:-840}
+      SEED_DAYS_OF_HISTORY: ${SEED_DAYS_OF_HISTORY:-180}
+    command: ['slotsight-seed']
+    restart: 'no'
+
+  web:
+    build:
+      context: ./apps/web
+    depends_on:
+      - api
+    ports:
+      # Host port is configurable because 5173 is the Vite default and is
+      # frequently already taken by another project. Override with WEB_PORT.
+      - '${WEB_PORT:-5173}:8080'
+    restart: unless-stopped
+
+volumes:
+  slotsight-db:

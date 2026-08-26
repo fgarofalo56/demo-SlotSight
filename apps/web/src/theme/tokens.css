@@ -1,0 +1,171 @@
+@import 'tailwindcss';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Neon Palms Casino Resort — design tokens
+
+   A casino floor at night: deep felt green, neon signage, brass and gold.
+   Confident, not gaudy.
+
+   Semantic performance colours are keyed to PEER INDEX, never raw WPUPD.
+   A $5 machine will always out-earn a penny machine; colouring on the raw
+   number just renders the denomination column again in colour.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* Brand */
+  --color-felt: #0b3d2e;
+  --color-felt-deep: #062218;
+  --color-felt-light: #12563f;
+  --color-magenta: #ff2e88;
+  --color-magenta-dim: #b31e5f;
+  --color-cyan: #22d3ee;
+  --color-cyan-dim: #0e7f90;
+  --color-gold: #f5c518;
+  --color-gold-dim: #a8870f;
+  --color-bone: #f5f1e8;
+  --color-bone-dim: #a8a396;
+
+  /* Performance bands — peer index */
+  --color-perf-strong: #34d399;
+  --color-perf-healthy: #a8a396;
+  --color-perf-watch: #fbbf24;
+  --color-perf-critical: #ff2e88;
+  --color-perf-untrusted: #22d3ee;
+
+  --font-display: 'Georgia', 'Times New Roman', serif;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Base
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(
+      ellipse 90% 55% at 50% -10%,
+      rgba(255, 46, 136, 0.13),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 70% 45% at 88% 8%,
+      rgba(34, 211, 238, 0.1),
+      transparent 60%
+    ),
+    var(--color-felt-deep);
+  background-attachment: fixed;
+  color: var(--color-bone);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Felt weave. Subtle enough to read as texture, not pattern. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 2px,
+      rgba(245, 241, 232, 0.5) 2px,
+      rgba(245, 241, 232, 0.5) 3px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 2px,
+      rgba(245, 241, 232, 0.5) 2px,
+      rgba(245, 241, 232, 0.5) 3px
+    );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Components
+   ───────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .np-panel {
+    background: linear-gradient(
+      160deg,
+      rgba(18, 86, 63, 0.55),
+      rgba(11, 61, 46, 0.35)
+    );
+    border: 1px solid rgba(245, 197, 24, 0.16);
+    border-radius: 0.75rem;
+    backdrop-filter: blur(8px);
+    box-shadow:
+      0 1px 0 rgba(245, 241, 232, 0.06) inset,
+      0 10px 30px -12px rgba(0, 0, 0, 0.7);
+  }
+
+  .np-neon-text {
+    text-shadow:
+      0 0 6px currentColor,
+      0 0 20px currentColor;
+  }
+
+  /* Diagonal hatch marks untrusted data. Pattern, not just colour — colour
+     alone is invisible to roughly one man in twelve. */
+  .np-hatch {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 5px,
+      rgba(34, 211, 238, 0.22) 5px,
+      rgba(34, 211, 238, 0.22) 10px
+    );
+  }
+
+  .np-focus {
+    outline: 2px solid var(--color-cyan);
+    outline-offset: 2px;
+  }
+}
+
+/* Visible focus for keyboard users, invisible for mouse users. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Respect the user's motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-felt-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 197, 24, 0.22);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 197, 24, 0.4);
+}

@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: slotsight
+metadata:
+  template: slotsight@0.1.0
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SlotSight — Azure Developer CLI project
+#
+#   azd auth login
+#   azd up            provision + deploy, from nothing
+#   azd down --purge  tear down (--purge matters, see docs/deploy-azure.md)
+#
+# NO SECRETS IN THIS FILE, and none in infra/. Every service-to-service call
+# uses the user-assigned managed identity, granted by RBAC. The only generated
+# secret is the PostgreSQL admin password, created at provision time and stored
+# in Key Vault — never an output, never logged.
+# ═══════════════════════════════════════════════════════════════════════════
+
+infra:
+  provider: bicep
+  path: infra
+  module: main
+
+services:
+  api:
+    project: ./apps/api
+    language: python
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+
+  web:
+    project: ./apps/web
+    language: ts
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+
+hooks:
+  postprovision:
+    posix:
+      shell: sh
+      continueOnError: false
+      interactive: false
+      run: |
+        echo ""
+        echo "  Provisioned. Endpoints:"
+        azd env get-values | grep -i "URI" || true
+        echo ""
+        echo "  The database is empty until the seed job runs."
+        echo "  See docs/deploy-azure.md."
+        echo ""
+    windows:
+      shell: pwsh
+      continueOnError: false
+      interactive: false
+      run: |
+        Write-Host ""
+        Write-Host "  Provisioned. Endpoints:"
+        azd env get-values | Select-String -Pattern "URI"
+        Write-Host ""
+        Write-Host "  The database is empty until the seed job runs."
+        Write-Host "  See docs/deploy-azure.md."
+        Write-Host ""
