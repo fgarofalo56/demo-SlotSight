@@ -7,7 +7,56 @@ load and what to do when something misbehaves.
 
 ---
 
-## Before you walk in
+## Pick your setup path first
+
+There are two ways to run this demo. **Path B needs nothing installed** and is
+the right choice on a locked-down work laptop.
+
+| | **Path A — local stack** | **Path B — Azure + repo** |
+|---|---|---|
+| Needs `uv` / `pnpm` / Docker | yes | **no** |
+| The app runs on | `localhost` | your Azure deployment |
+| Copilot config demo | ✅ | ✅ identical |
+| `/spec-new`, `/spec-clarify`, `/spec-plan` | ✅ | ✅ identical |
+| `/spec-implement` | ✅ | ⚠️ writes code; the gate step fails |
+| `/spec-verify` | ✅ | ❌ it only runs gates |
+| `slotsight` MCP server | ✅ | ❌ needs the venv |
+| The guardrail hook | ✅ | ✅ **pure stdlib, no packages** |
+
+> [!TIP]
+> **Behind a corporate TLS proxy?** `uv` failing with `HandshakeFailure` on
+> `files.pythonhosted.org` means it does not trust your company's root CA.
+> Fix: `$env:UV_SYSTEM_CERTS = "1"` (loads the Windows certificate store).
+> Or just use Path B. See
+> [troubleshooting](troubleshooting.md#package-installs-fail-behind-a-corporate-proxy).
+
+---
+
+## Before you walk in — Path B (nothing installed)
+
+```powershell
+git pull
+python --version    # the guardrail hook needs this on PATH
+```
+
+Open the folder in VS Code **at the repository root**, reload the window, then
+verify these four things:
+
+1. **Chat sidebar** (not inline chat) — type `/` and confirm `spec-*` appears
+2. **Agents dropdown** lists six agents
+3. Ask Copilot to *read the .env file* → it gets **denied**
+4. Your Azure URL loads in a browser
+
+Have `specs/003-competitive-intel-feed/spec.md` open in a tab, ready.
+
+**Browser tabs:** your Azure web app, and the repo on GitHub.
+
+Everywhere below that says `localhost:5173`, use your Azure URL instead. Skip
+Act 5's `/spec-verify` step.
+
+---
+
+## Before you walk in — Path A (local stack)
 
 Do this the night before, not in the room.
 
@@ -32,6 +81,9 @@ curl -sS -X POST localhost:8000/api/chat -H 'content-type: application/json' \
 > cache is platform-encrypted and the slim image has no `az` CLI. Analytics work
 > fine in Docker; **chat needs `make dev`.** See
 > [troubleshooting](troubleshooting.md#chat-returns-502-inside-docker).
+>
+> In **Azure** this is not a problem — managed identity resolves cleanly, so the
+> chat tab works on the deployed version with no configuration.
 
 **In VS Code:** open the folder **at the repository root** (not a parent), then
 reload the window. Confirm all five MCP servers connect, and that the agents
@@ -47,6 +99,7 @@ ready.
 > [troubleshooting](troubleshooting.md#the-spec--commands-dont-appear-in-chat).
 
 **Browser tabs:** the app at `localhost:5173`, and the repo on GitHub.
+
 
 ---
 

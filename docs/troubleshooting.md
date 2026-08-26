@@ -360,6 +360,79 @@ too — pick one with `/agent`.
 
 ---
 
+## Package installs fail behind a corporate proxy
+
+```
+error: Failed to fetch: `https://files.pythonhosted.org/.../asyncpg-...whl.metadata`
+  Caused by: received fatal alert: HandshakeFailure
+```
+
+Your company runs a TLS-inspecting proxy (Zscaler, Netskope, Palo Alto, and
+friends). It re-signs HTTPS with its own root CA. That CA is in the **Windows
+certificate store**, but `uv`, `pip`, and `npm` ship their own bundled CA list
+and never look there — so the handshake fails.
+
+**The fix is to point each tool at the system trust store.**
+
+```powershell
+# uv — load certs from the platform store
+$env:UV_SYSTEM_CERTS = "1"
+[Environment]::SetEnvironmentVariable("UV_SYSTEM_CERTS", "1", "User")
+
+# npm / Node
+$env:NODE_OPTIONS = "--use-openssl-ca"
+```
+
+If that is not enough, export the root CA and point everything at the file.
+`certmgr.msc` → Trusted Root Certification Authorities → your corporate CA →
+Export → **Base-64 encoded X.509** → save as `corp-root-ca.pem`.
+
+```powershell
+$env:SSL_CERT_FILE      = "C:\certs\corp-root-ca.pem"   # uv, requests, httpx
+$env:REQUESTS_CA_BUNDLE = "C:\certs\corp-root-ca.pem"
+$env:NODE_EXTRA_CA_CERTS = "C:\certs\corp-root-ca.pem"  # node, npm
+npm config set cafile "C:\certs\corp-root-ca.pem"
+```
+
+> [!WARNING]
+> **Do not reach for `--allow-insecure-host`, `strict-ssl false`, or
+> `PIP_TRUSTED_HOST`.** They work by disabling verification rather than fixing
+> trust, which means you are accepting any certificate from anyone — on a
+> corporate machine, while installing executable code. Fix the trust store.
+
+### Or skip installing entirely
+
+You do not need any of it for the Copilot portion of this repo. Every
+instruction file, agent, prompt, and skill is plain text that VS Code reads off
+disk, and **every hook script is pure Python stdlib with zero third-party
+imports**. See the setup-path table in
+[demo-script.md](demo-script.md#pick-your-setup-path-first) for exactly what
+works with nothing installed.
+
+---
+
+## The guardrail hook never fires
+
+The hooks shell out to Python. If no interpreter resolves, they silently do
+nothing — and a security control that silently does nothing is worse than none,
+because it is still trusted.
+
+`.github/hooks/guardrails.json` tries `python`, then `py -3`, then `python3`.
+Confirm at least one works:
+
+```powershell
+python --version
+py -3 --version
+```
+
+If all fail, install Python from python.org (tick **Add python.exe to PATH**) or
+adjust the commands in `guardrails.json` to an absolute interpreter path.
+
+To confirm the guard is live, ask Copilot to read `.env`. It should be denied
+with an explanation. If it just reads the file, the hook is not running.
+
+---
+
 ## MCP servers show as unavailable in VS Code
 
 1. **Reload the window.** `.vscode/mcp.json` is read at startup.

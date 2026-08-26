@@ -1,31 +1,46 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vscode/main/src/vs/workbench/contrib/chat/common/hooks/hookSchema.json",
+
+  "//": [
+    "Each command tries three interpreter names in turn.",
+    "",
+    "This is safe ONLY because every script here exits 0 unconditionally —",
+    "including guard_secrets.py's deny path, which signals refusal in its JSON",
+    "output rather than its exit code. So the `||` chain can fire only when the",
+    "interpreter itself is missing, never because a script did its job.",
+    "",
+    "Why bother: `python` is not always on PATH on Windows (the py launcher may",
+    "be the only entry point), and on some Linux distributions only `python3`",
+    "exists. A hook that silently never runs is worse than no hook, because it",
+    "is still trusted — and the PreToolUse guard here is a security control."
+  ],
+
   "hooks": {
     "SessionStart": [
       {
         "type": "command",
-        "command": "python .github/hooks/scripts/inject_context.py",
+        "command": "python .github/hooks/scripts/inject_context.py || py -3 .github/hooks/scripts/inject_context.py || python3 .github/hooks/scripts/inject_context.py",
         "timeout": 15
       }
     ],
     "PreToolUse": [
       {
         "type": "command",
-        "command": "python .github/hooks/scripts/guard_secrets.py",
+        "command": "python .github/hooks/scripts/guard_secrets.py || py -3 .github/hooks/scripts/guard_secrets.py || python3 .github/hooks/scripts/guard_secrets.py",
         "timeout": 10
       }
     ],
     "PostToolUse": [
       {
         "type": "command",
-        "command": "python .github/hooks/scripts/format_and_lint.py",
+        "command": "python .github/hooks/scripts/format_and_lint.py || py -3 .github/hooks/scripts/format_and_lint.py || python3 .github/hooks/scripts/format_and_lint.py",
         "timeout": 60
       }
     ],
     "Stop": [
       {
         "type": "command",
-        "command": "python .github/hooks/scripts/verify_gates.py",
+        "command": "python .github/hooks/scripts/verify_gates.py || py -3 .github/hooks/scripts/verify_gates.py || python3 .github/hooks/scripts/verify_gates.py",
         "timeout": 20
       }
     ]
