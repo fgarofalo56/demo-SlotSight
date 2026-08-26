@@ -47,19 +47,32 @@ obvious. This is the table I wish I had read first.
 | `AGENTS.md` | ✅ | ✅ | ✅ |
 | `*.instructions.md` | ✅ | ⚠️ varies | ✅ |
 | **`*.prompt.md`** | ✅ | ❌ **no** | ❌ no |
-| `*.agent.md` | ✅ | ⚠️ partial | ❌ no |
-| `SKILL.md` | ✅ | ✅ | ⚠️ varies |
+| `*.agent.md` | ✅ | ✅ (`/agent`) | ⚠️ varies |
+| **`SKILL.md`** | ✅ | ✅ | ✅ |
 | Hooks | ✅ | ⚠️ varies | ❌ no |
 | MCP servers | ✅ | ✅ | ✅ (repo config) |
 
 **Prompt files are the sharp edge.** VS Code's documentation states plainly that
 *"Agents running on the Agent Host don't use prompt files"* — and the Copilot
-CLI is an Agent Host. The `/spec-*` commands in this repo therefore work in the
-**VS Code Chat view only**, not in the CLI, not in inline chat.
+CLI is an Agent Host.
 
-If you need a workflow available everywhere, write it as an **agent skill**
-rather than a prompt file. That is the documented conversion path, and it is why
-skills sit higher in that table.
+**So this repository ships the spec workflow twice.** The same instructions
+exist as prompt files, for the slash-command UX in VS Code, *and* as agent
+skills, which are portable everywhere:
+
+| Workflow step | VS Code Chat | Copilot CLI / coding agent |
+|---|---|---|
+| Write a spec | `/spec-new` | *"write a spec for X"* → `spec-new` skill |
+| Plan it | `/spec-plan` | *"plan spec 003"* → `spec-plan` skill |
+| Implement | `/spec-implement` | *"implement the next task in spec 003"* |
+| Verify | `/spec-verify` | *"verify spec 001"* |
+
+Skills activate from their `description` rather than an explicit command, which
+is why those descriptions are written with trigger phrases in them.
+
+**The general lesson:** if a workflow needs to work everywhere, write it as a
+skill. Use a prompt file when you specifically want the VS Code slash-command
+affordance — `${input:}` arguments, a pinned agent, a fixed tool list.
 
 ---
 
@@ -205,10 +218,21 @@ engineer new to the domain would need it explained, it is a skill.
 |---|---|
 | `slot-floor-analytics` | WPUPD, hold, par, and the four reasoning traps |
 | `neon-palms-design-system` | Tokens, the peer-index colour scale, a11y |
+| `spec-new` · `spec-plan` · `spec-implement` · `spec-verify` | The spec workflow, portable to the CLI and the coding agent |
 
 The `description` frontmatter is the whole retrieval mechanism — the model reads
 only that when deciding whether to load the body. A vague description produces a
-skill that never loads.
+skill that never loads, which is why the `spec-*` descriptions are stuffed with
+trigger phrases (*"plan a spec"*, *"break down a spec into tasks"*, *"how should
+we build this"*).
+
+Discovery paths:
+
+| Scope | Path |
+|---|---|
+| Repository | `.github/skills/<name>/SKILL.md` |
+| User | `~/.copilot/skills/<name>/SKILL.md` |
+| Also read | `.claude/skills/`, `.agents/skills/` |
 
 ---
 

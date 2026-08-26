@@ -26,13 +26,13 @@ param location string
 @description('Object ID of the user running azd. Granted data-plane access for local debugging. Leave empty in CI.')
 param principalId string = ''
 
-@description('Model to deploy. Change with care - the app negotiates parameter shapes but the deployment must exist.')
-param chatModelName string = 'gpt-4.1'
+@description('Model to deploy. Change with care - the app negotiates parameter shapes but the deployment must exist AND have GlobalStandard quota in your region.')
+param chatModelName string = 'gpt-4o'
 
 @description('Model version.')
-param chatModelVersion string = '2025-04-14'
+param chatModelVersion string = '2024-11-20'
 
-@description('Deployment capacity in thousands of TPM. 30 is enough for a demo.')
+@description('Deployment capacity in thousands of TPM. 30 is ample for a demo.')
 param chatModelCapacity int = 30
 
 // ── Naming ─────────────────────────────────────────────────────────────────
@@ -89,11 +89,15 @@ module registry 'modules/registry.bicep' = {
 }
 
 // ── Key Vault ──────────────────────────────────────────────────────────────
+// Key Vault names are capped at 24 characters, are alphanumeric-plus-hyphen
+// only, and must start with a letter. `kv-slotsight-<12 chars of token>` is 25
+// — one over — and fails at deploy time with VaultNameNotValid, not at compile
+// time. Dropping the hyphens buys the two characters back.
 module vault 'modules/keyvault.bicep' = {
   scope: rg
   name: 'keyvault'
   params: {
-    name: 'kv-${prefix}-${take(resourceToken, 12)}'
+    name: 'kvslotsight${take(resourceToken, 13)}'
     location: location
     tags: tags
     identityPrincipalId: identity.outputs.principalId

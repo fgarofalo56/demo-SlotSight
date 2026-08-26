@@ -81,5 +81,7 @@ Auth is **Entra ID via `DefaultAzureCredential`** — there is no API-key settin
 so there is no key to leak. Run `az login` and make sure your account holds
 `Cognitive Services OpenAI User` on the resource.
 
-`GET /api/health` reports whether Azure OpenAI is reachable and authorized
-without revealing the endpoint or any token.
+`GET /api/health` reports whether Azure OpenAI is **configured**, without
+revealing the endpoint or any token. It deliberately reports `"configured"`
+rather than `"ok"` — two environment variables being set does not prove the
+credential resolves. `POST /api/chat` is the only real check.

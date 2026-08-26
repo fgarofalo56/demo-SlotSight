@@ -4,10 +4,20 @@
 #   docker compose up --build       everything
 #   docker compose run --rm seed    regenerate the synthetic floor
 #
+# ⚠  POSTGRES_PASSWORD defaults here MUST match .env.example. Docker Compose
+#    auto-reads .env for variable substitution, so if the two disagree, copying
+#    .env.example after a first `make up` gives you a database volume
+#    initialized with one password and a client using another —
+#    "password authentication failed for user slotsight". Postgres bakes the
+#    password in at volume-init time; changing it later needs `make clean`.
+#
 # Azure OpenAI is OPTIONAL here. The dashboard, machines, and recommendations
 # all work with no cloud dependency; only /api/chat needs it. Set the two
 # AZURE_OPENAI_* vars in .env to enable it. There is no API key — auth is
 # Entra ID, so the container mounts your `az login` token cache read-only.
+#
+# NOTE: Entra auth does NOT cross from a Windows/macOS host into a Linux
+# container. Use `make dev` for a local chat demo. See docs/troubleshooting.md.
 # ═══════════════════════════════════════════════════════════════════════════
 
 name: slotsight
@@ -17,7 +27,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-slotsight}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
       POSTGRES_DB: ${POSTGRES_DB:-slotsight}
     ports:
       # Exposed so the slotsight MCP server can reach it from the host.
@@ -43,7 +53,7 @@ services:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
       POSTGRES_USER: ${POSTGRES_USER:-slotsight}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
       POSTGRES_DB: ${POSTGRES_DB:-slotsight}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080
@@ -74,7 +84,7 @@ services:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
       POSTGRES_USER: ${POSTGRES_USER:-slotsight}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
       POSTGRES_DB: ${POSTGRES_DB:-slotsight}
       SEED_RANDOM_SEED: ${SEED_RANDOM_SEED:-20251107}
       SEED_MACHINE_COUNT: ${SEED_MACHINE_COUNT:-840}

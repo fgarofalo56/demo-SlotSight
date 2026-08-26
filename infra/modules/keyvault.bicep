@@ -7,7 +7,6 @@
 param name string
 param location string
 param tags object
-
 @description('Principal ID of the managed identity that reads secrets.')
 param identityPrincipalId string
 

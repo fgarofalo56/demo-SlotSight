@@ -108,11 +108,16 @@ grep -c '^AZURE_OPENAI_ENDPOINT=' .env
 
 # Behavior — does the identity actually work?
 az account show --query user.name -o tsv
-curl -fsS localhost:8000/api/health | jq .azure_openai
+curl -fsS localhost:8000/api/health | jq '.dependencies[] | select(.name=="azure_openai")'
 ```
 
-`/api/health` reports whether Azure OpenAI is *reachable and authorized*
-without ever revealing the endpoint or the token.
+`/api/health` reports whether Azure OpenAI is **configured**, without ever
+revealing the endpoint or a token — and it says `"configured"`, deliberately
+**not** `"ok"`, because two environment variables being set does not prove the
+credential resolves. Proving that would mean minting a token on every health
+check. `POST /api/chat` is the only real test. There is a test asserting the
+endpoint never leaks the endpoint or a token
+(`test_never_leaks_the_endpoint_or_a_token`).
 
 ---
 
@@ -135,7 +140,7 @@ problem to solve — and this repo's controls are **not** sufficient for it.
 Found a real problem — a leaked credential in history, a dependency CVE, an
 injection path?
 
-**Open a [GitHub Security Advisory](../../security/advisories/new)** rather than
+**Open a [GitHub Security Advisory](https://github.com/fgarofalo56/demo-SlotSight/security/advisories/new)** rather than
 a public issue, so it can be triaged before disclosure.
 
 For anything non-sensitive, a normal issue is fine.

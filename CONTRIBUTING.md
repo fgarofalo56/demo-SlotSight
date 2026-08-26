@@ -86,5 +86,5 @@ Reference the spec where there is one: `feat(analytics): add coverage gaps (003)
 
 ## Reporting a security issue
 
-Open a [Security Advisory](../../security/advisories/new), not a public issue.
+Open a [Security Advisory](https://github.com/fgarofalo56/demo-SlotSight/security/advisories/new), not a public issue.
 See [`SECURITY.md`](SECURITY.md).

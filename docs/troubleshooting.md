@@ -222,21 +222,37 @@ The single most common setup question. Work down this list.
 
 ### 1. Are you in VS Code Chat? Prompt files do not work anywhere else
 
-**This is the most likely answer, and it is a hard limitation, not a
+**This is the most likely answer, and it is a platform limitation, not a
 misconfiguration.**
 
-| Surface | `/spec-*` prompt files | `.github/agents/` custom agents |
-|---|---|---|
-| **VS Code Chat view** | ✅ yes | ✅ yes |
-| **VS Code inline chat** (`Ctrl+I`) | ❌ no | ❌ no |
-| **GitHub Copilot CLI** | ❌ **no** | ⚠️ partial |
-| **Copilot coding agent** (github.com) | ❌ no | ❌ no |
+| Surface | `/spec-*` prompt files | `spec-*` **skills** | `.github/agents/` |
+|---|---|---|---|
+| **VS Code Chat view** | ✅ yes | ✅ yes | ✅ yes |
+| **VS Code inline chat** (`Ctrl+I`) | ❌ no | ❌ no | ❌ no |
+| **GitHub Copilot CLI** | ❌ **no** | ✅ **yes** | ✅ yes (`/agent`) |
+| **Copilot coding agent** (github.com) | ❌ no | ✅ yes | ⚠️ varies |
 
-VS Code's own documentation is explicit: *"Agents running on the Agent Host
-don't use prompt files."* The Copilot CLI is an Agent Host. No amount of
-configuration will surface `/spec-new` there.
+VS Code's documentation is explicit: *"Agents running on the Agent Host don't
+use prompt files."* The Copilot CLI is an Agent Host. No amount of configuration
+will surface `/spec-new` there.
 
-Use the **Chat view** — the sidebar panel, not inline chat, not the CLI.
+> [!TIP]
+> **This repository ships the spec workflow twice**, precisely because of that
+> row. The same instructions exist as prompt files (`.github/prompts/`) for the
+> nice VS Code slash-command UX, **and** as agent skills
+> (`.github/skills/spec-*/`) which are portable to the CLI and the coding agent.
+>
+> In the CLI you don't type a slash command — you just ask, and the runtime
+> loads the skill from its description:
+>
+> ```
+> copilot
+> > plan spec 003-competitive-intel-feed
+> > implement the next task in spec 003
+> > verify spec 001
+> ```
+
+Use the **Chat view** for slash commands — the sidebar panel, not inline chat.
 
 ### 2. Is the folder opened at the repository root?
 
@@ -303,19 +319,33 @@ Installing [Spec Kit](https://github.com/github/spec-kit) gives you the
 
 ## I want the spec workflow in the Copilot CLI
 
-Prompt files cannot work there. The documented path is to convert a prompt into
-an **agent skill**, which the Agent Host does read — see
-[`.github/skills/`](../.github/skills/) for the two this repo already ships.
+**It already works there** — just not as a slash command.
 
-The practical alternative is to run the CLI and paste the body of the prompt
-file directly:
+The workflow ships twice: as prompt files for the VS Code slash-command UX, and
+as **agent skills** in [`.github/skills/`](../.github/skills/), which the Copilot
+CLI, the coding agent, and VS Code all read.
+
+Skills activate from their `description`, so you ask in plain language rather
+than typing a command:
 
 ```bash
-cat .github/prompts/spec-plan.prompt.md
+copilot
+> write a spec for competitor coverage gaps
+> plan spec 003-competitive-intel-feed
+> implement the next task in spec 003
+> verify spec 001
 ```
 
-Everything below the frontmatter is a plain instruction block and works as a
-pasted prompt in any agent.
+Discovery paths, for reference:
+
+| Scope | Path |
+|---|---|
+| This repository | `.github/skills/<name>/SKILL.md` |
+| Your machine | `~/.copilot/skills/<name>/SKILL.md` |
+| Also read | `.claude/skills/`, `.agents/skills/` |
+
+The six custom agents in [`.github/agents/`](../.github/agents/) work in the CLI
+too — pick one with `/agent`.
 
 ---
 
