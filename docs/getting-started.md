@@ -21,7 +21,7 @@ Docker alone is enough to run everything except the conversational endpoint.
 ## 1. Clone and start
 
 ```bash
-git clone https://github.com/<you>/demo-SlotSight.git
+git clone https://github.com/fgarofalo56/demo-SlotSight.git
 cd demo-SlotSight
 make up
 ```

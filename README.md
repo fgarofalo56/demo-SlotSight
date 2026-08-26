@@ -53,7 +53,7 @@ The app exists so the *process* has something to point at.
 ## 60-second start
 
 ```bash
-git clone https://github.com/<you>/demo-SlotSight.git
+git clone https://github.com/fgarofalo56/demo-SlotSight.git
 cd demo-SlotSight
 make setup          # installs deps, wires the git hooks
 make up             # docker compose: postgres + seed + api + web

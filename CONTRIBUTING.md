@@ -8,7 +8,7 @@ This is a teaching repository. The most valuable contributions make it a
 ## Setup
 
 ```bash
-git clone https://github.com/<you>/demo-SlotSight.git
+git clone https://github.com/fgarofalo56/demo-SlotSight.git
 cd demo-SlotSight
 make setup      # deps + wires the git hooks
 make up
