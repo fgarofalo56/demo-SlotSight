@@ -6,7 +6,7 @@
 # image is both smaller and a smaller attack surface.
 # ═══════════════════════════════════════════════════════════════════════════
 
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /usr/local/bin/uv
 
@@ -50,7 +50,7 @@ RUN VIRTUAL_ENV=/opt/venv uv pip install --no-cache --no-deps --reinstall-packag
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.14-slim-bookworm AS runtime
 
 # Non-root. A container that does not need root should not have it.
 RUN groupadd --system --gid 1001 slotsight \
