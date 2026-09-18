@@ -50,7 +50,7 @@ jobs:
         working-directory: apps/api
         run: uv venv && uv pip install -e ".[dev]"
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
