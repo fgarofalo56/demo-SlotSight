@@ -7,7 +7,6 @@ name: 'Copilot Setup Steps'
 # default branch for Copilot to use it.
 
 on:
-  workflow_dispatch:
   push:
     paths: ['.github/workflows/copilot-setup-steps.yml']
   pull_request:
