@@ -31,9 +31,21 @@ RUN mkdir -p src/slotsight && touch src/slotsight/__init__.py \
 # entirely, and the image ships with an EMPTY package. The failure surfaces at
 # runtime as `ModuleNotFoundError: No module named 'slotsight.seed'`, which
 # points nowhere near the Dockerfile.
+#
+# The check is an IMPORT probe, not a path probe. It used to be
+# `test -f /opt/venv/lib/python3.12/site-packages/slotsight/seed/generate.py`,
+# which hardcoded the interpreter's minor version into a path — so bumping the
+# base image to 3.13 moved site-packages, the test failed, and the build died
+# claiming the package "did not install completely". It had installed fine.
+# That blocked the python base-image bump for three weeks behind a message
+# pointing at the wrong thing.
+#
+# Importing is also the stronger assertion: the failure this guards against
+# surfaces at runtime as ModuleNotFoundError, so checking that the module
+# IMPORTS tests the actual property rather than a proxy for it.
 COPY src/ ./src/
 RUN VIRTUAL_ENV=/opt/venv uv pip install --no-cache --no-deps --reinstall-package slotsight . \
-    && test -f /opt/venv/lib/python3.12/site-packages/slotsight/seed/generate.py \
+    && /opt/venv/bin/python -c "import slotsight.seed.generate" \
     || (echo "BUILD ERROR: slotsight package did not install completely" && exit 1)
 
 
